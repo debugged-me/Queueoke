@@ -304,8 +304,19 @@
     host.appendChild(el);
   }
 
+  // ---------- Guest count ----------
+  let approvedGuests = 0;
+  function updateGuestCount() {
+    const el = document.getElementById('guest-count');
+    if (el) el.textContent = `👥 ${approvedGuests} guest${approvedGuests === 1 ? '' : 's'}`;
+  }
+
   // ---------- Pusher bindings ----------
   Q.bind(ROOM, 'guest-join-request', (d) => addGuestRequest(d));
+  Q.bind(ROOM, 'guest-decision', (d) => {
+    if (d.decision === 'approved') { approvedGuests++; updateGuestCount(); }
+    document.querySelector(`.guest-toast[data-gid="${d.guest_id}"]`)?.remove();
+  });
   Q.bind(ROOM, 'song-added', (d) => {
     if (!queue.find(s => s.id === d.id)) { queue.push(d); renderQueue(); }
     maybeAdvance();
@@ -340,6 +351,9 @@
         nowPlaying = playing;
         if (playerReady && player) player.loadVideoById(playing.video_id);
       }
+      // Count approved guests
+      if (s.guests) approvedGuests = s.guests.filter(g => g.status === 'approved').length;
+      updateGuestCount();
       renderQueue(); renderNowBar();
       if (s.room && typeof s.room.pitch === 'number') {
         document.getElementById('pitch').value = s.room.pitch;

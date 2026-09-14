@@ -42,6 +42,7 @@
   --glow-pink:   0 0 24px rgba(255,45,120,0.35);
   --glow-purple: 0 0 24px rgba(168,85,247,0.35);
   --glow-cyan:   0 0 24px rgba(34,211,238,0.35);
+  --glow-amber:  0 0 24px rgba(251,191,36,0.35);
 
   --radius:    16px;
   --radius-sm: 10px;
@@ -61,7 +62,6 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
-  /* Subtle ambient glow */
   background-image:
     radial-gradient(ellipse 80% 50% at 20% 0%, rgba(168,85,247,0.08), transparent),
     radial-gradient(ellipse 60% 50% at 80% 100%, rgba(34,211,238,0.06), transparent);
@@ -122,6 +122,10 @@ input, select { font: inherit; color: inherit; }
   background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 0 30px rgba(168,85,247,0.3));
   line-height: 1;
+}
+.brand-sub {
+  font-size: .8rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--muted); margin-top: -4px;
 }
 .tagline {
   color: var(--muted); font-size: clamp(1rem, 2.5vw, 1.35rem);
@@ -190,6 +194,42 @@ input, select { font: inherit; color: inherit; }
 .song .sub { color: var(--muted); font-size: .82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .song .actions { display: flex; gap: 6px; align-items: center; }
 
+/* ---------- Vote button ---------- */
+.vote-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--panel-2); border: 1px solid var(--panel-3);
+  font-weight: 700; font-size: .82rem; color: var(--text);
+  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+}
+.vote-btn:hover { background: rgba(168,85,247,0.15); border-color: var(--purple); }
+.vote-btn:active { transform: scale(0.92); }
+.vote-btn:disabled { opacity: .5; cursor: default; }
+.vote-btn.voted { background: rgba(168,85,247,0.2); border-color: var(--purple); color: var(--purple); }
+
+/* ---------- Connection status ---------- */
+.conn-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .78rem; font-weight: 600;
+}
+.conn-status .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--amber); box-shadow: 0 0 8px var(--amber);
+  animation: pulse-dot 1.5s ease infinite;
+}
+.conn-status.live .dot { background: var(--green); box-shadow: 0 0 8px var(--green); animation: none; }
+.conn-status.waiting .dot { background: var(--amber); }
+.conn-status.error .dot { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
+@keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+/* ---------- Guest count chip ---------- */
+.guest-count {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 999px;
+  background: var(--panel-2); border: 1px solid var(--panel-3);
+  font-size: .78rem; font-weight: 700; color: var(--cyan);
+}
+
 /* ---------- Toast ---------- */
 #toasts { position: fixed; top: 16px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
 .toast {
@@ -224,6 +264,13 @@ input, select { font: inherit; color: inherit; }
   font-size: .72rem; text-transform: uppercase; letter-spacing: 1.2px;
   color: var(--muted); margin-bottom: 12px; font-weight: 700;
 }
+
+/* ---------- Empty state ---------- */
+.empty-state {
+  text-align: center; padding: 40px 20px; color: var(--muted);
+}
+.empty-state .emoji { font-size: 2.5rem; margin-bottom: 8px; opacity: .6; }
+.empty-state .text { font-size: .9rem; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 640px) {

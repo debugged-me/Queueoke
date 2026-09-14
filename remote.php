@@ -26,9 +26,18 @@ $status = $_GET['status'] ?? 'approved';
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
   .topbar .avatar { width: 34px; height: 34px; }
   .topbar .nick { font-weight: 700; }
-  .topbar .room-tag { margin-left: auto; font-size: .8rem; color: var(--muted); display: flex; align-items: center; gap: 4px; }
-  .topbar .room-tag .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); }
-  .topbar .room-tag.connected .dot { background: var(--green); }
+  .conn-status {
+    margin-left: auto; font-size: .8rem; color: var(--muted);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .conn-status .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--amber); box-shadow: 0 0 8px var(--amber);
+    animation: pulse-dot 1.5s ease infinite;
+  }
+  .conn-status.live .dot { background: var(--green); box-shadow: 0 0 8px var(--green); animation: none; }
+  .conn-status.live { color: var(--green); }
+  @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: .4; }
   .tabs { display: flex; gap: 6px; padding: 10px 12px; position: sticky; top: 57px; z-index: 99;
     background: rgba(8,8,15,0.85); border-bottom: 1px solid var(--panel-2); overflow-x: auto;
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
@@ -83,7 +92,7 @@ $status = $_GET['status'] ?? 'approved';
     <div class="nick"><?= htmlspecialchars($nick) ?></div>
     <div class="small muted">Room <?= htmlspecialchars($roomId) ?></div>
   </div>
-  <div class="room-tag" id="conn-status">● connecting</div>
+  <div class="conn-status waiting" id="conn-status"><span class="dot"></span> connecting</div>
 </div>
 
 <!-- Pending approval screen -->
@@ -91,6 +100,7 @@ $status = $_GET['status'] ?? 'approved';
   <div class="big">⏳</div>
   <div class="h1">Waiting for host approval</div>
   <div class="muted">The TV host will let you in shortly. Hang tight!</div>
+  <div class="small muted" style="margin-top:8px">Room <?= htmlspecialchars($roomId) ?></div>
 </div>
 
 <!-- Main app (hidden until approved) -->

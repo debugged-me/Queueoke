@@ -17,7 +17,10 @@ $cfg = config_get();
 </head>
 <body>
 <div class="center-screen">
-  <div class="brand">Queueoke</div>
+  <div>
+    <div class="brand">Queueoke</div>
+    <div class="brand-sub">Karaoke Party</div>
+  </div>
   <div class="tagline">Turn your TV into a karaoke stage. Use your phone as the remote. No apps, no typing on the TV.</div>
 
   <div class="role-pick">

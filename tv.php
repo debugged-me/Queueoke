@@ -86,6 +86,7 @@ $qrTarget = $publicUrl . '/?room=' . urlencode($roomId);
       <div class="idle-msg" id="idle-msg">
         <div class="big">Queueoke</div>
         <div>Waiting for the first song...</div>
+        <div class="guest-count" id="guest-count" style="margin-top:16px">👥 0 guests</div>
         <div class="small muted" style="margin-top:8px">Guests: scan the QR code on the right →</div>
       </div>
       <div id="countdown" class="hidden"></div>

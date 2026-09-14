@@ -8,7 +8,14 @@
   // ---------- Approval gate ----------
   function setApproved(state) {
     approved = state;
-    document.getElementById('conn-status').textContent = state ? '● live' : '● waiting';
+    const el = document.getElementById('conn-status');
+    if (state) {
+      el.className = 'conn-status live';
+      el.innerHTML = '<span class="dot"></span> live';
+    } else {
+      el.className = 'conn-status waiting';
+      el.innerHTML = '<span class="dot"></span> waiting';
+    }
     document.getElementById('pending-screen').classList.toggle('hidden', state);
     document.getElementById('app').classList.toggle('hidden', !state);
   }
@@ -88,12 +95,13 @@
     up.innerHTML = upcoming.map((s, i) => `<div class="qitem" data-id="${s.id}">
       <div class="pos">${i + 1}</div><img src="${s.thumbnail || ''}">
       <div class="meta"><div class="t">${esc(s.title)}</div><div class="s">🎤 ${esc(s.nickname)}</div></div>
-      <button class="vote">👍 ${s.votes || 0}</button>
+      <button class="vote-btn" data-voted="false">👍 ${s.votes || 0}</button>
     </div>`).join('');
-    up.querySelectorAll('.vote').forEach(b => {
+    up.querySelectorAll('.vote-btn').forEach(b => {
       b.addEventListener('click', async () => {
+        if (b.dataset.voted === 'true') return;
         const id = parseInt(b.closest('.qitem').dataset.id, 10);
-        try { await Q.api('vote.php', { room_id: ROOM, guest_id: GUEST, song_id: id }); b.disabled = true; }
+        try { await Q.api('vote.php', { room_id: ROOM, guest_id: GUEST, song_id: id }); b.dataset.voted = 'true'; b.classList.add('voted'); }
         catch {}
       });
     });
