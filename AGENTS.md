@@ -4,9 +4,8 @@
 - **Backend**: plain PHP 8 (no framework, no composer on server). One file per API action in `api/`.
 - **DB**: MySQL/MariaDB via PDO. Schema in `schema.sql`. Import via phpMyAdmin.
 - **Real-time**: Pusher (managed WebSocket relay). Self-contained minimal client in `lib/pusher.php` (signed REST POST, no SDK).
-- **Video playback**: HTML5 `<video>` element (NOT YouTube IFrame API). The TV calls `api/resolve.php` → `lib/youtube.php` → resolver microservice to get a direct streamable URL.
-- **Resolver microservice**: Python (Flask + yt-dlp) in `resolver/`. Deploys separately on a free-tier PaaS (Render/Railway/Fly.io). cPanel can't run Python/yt-dlp.
-- **Frontend**: vanilla JS + CSS. No build step. Pusher + Web Audio loaded from CDNs. No YouTube IFrame script.
+- **Video playback**: YouTube IFrame API (`YT.Player`). 100% client-side, zero server load, no resolver needed.
+- **Frontend**: vanilla JS + CSS. No build step. Pusher + YouTube IFrame API loaded from CDNs.
 - **Secrets**: `config.php` (gitignored). Copy from `config.sample.php`. Never commit.
 
 ## Conventions
@@ -20,17 +19,16 @@
 ## Key gotchas found during build
 - PDO prepared statement parameter order must match placeholder order in the SQL text. A swapped `(int)$guestId, $roomId` vs `room_id = ? AND guest_id = ?` silently returned 0 and broke the anti-hog limit. Always double-check `execute([...])` order against the query.
 - cPanel shared hosting cannot run a persistent WebSocket server (Apache reaps processes). That's why real-time is delegated to Pusher and the host only serves static files + stateless PHP.
-- **Pure-PHP YouTube URL extraction is not feasible.** YouTube's signature cipher is now WASM-based (the old JS split/join/reverse/splice patterns are gone from their player JS). The internal player API requires PoT tokens. Public resolver APIs (Cobalt, Piped) are down or require auth. The only working approach is a separate microservice running yt-dlp (Python), which cPanel can't host.
-- The 5-second "Get Ready to Sing!" countdown serves double duty: it's a visual cue AND gives the `<video>` element time to buffer the resolved URL before playback starts.
+- **YouTube datacenter IP blocking**: we tried a separate Python (yt-dlp) resolver microservice on Render to extract direct video URLs for an HTML5 `<video>` element. YouTube aggressively blocks datacenter IPs with "Sign in to confirm you're not a bot" — even with cookies, even with the android client. This was unreliable for most videos. Reverted to the YouTube IFrame API which is 100% reliable.
+- The 5-second "Get Ready to Sing!" countdown is a visual cue for the singer before each song starts.
 
 ## Pitch transpose limitation
-HTML5 `<video>` uses `playbackRate` with `preservesPitch=false` (tape-style: shifts both pitch AND tempo). True pitch-only shifting (same tempo, different key) requires routing video audio through Web Audio + a pitch shifter library (SoundTouch.js). This is a future enhancement — the video element CAN expose its audio to Web Audio via `MediaElementAudioSourceNode`, unlike the YouTube IFrame API which couldn't.
+The YouTube IFrame API only allows a fixed set of playback rates (0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2). Changing the rate shifts both pitch AND tempo (tape-style). True pitch-only shifting isn't possible because the IFrame API doesn't expose audio to Web Audio. The pitch slider snaps to the nearest available rate. For exact-key karaoke, use YouTube videos already uploaded in the target key.
 
 ## Local dev
-1. Start resolver: `cd resolver && source .venv/bin/activate && PORT=5001 python3 app.py`
-2. Start PHP: `php -S 127.0.0.1:8000 -t .` (after creating `queueoke_test` DB + importing `schema.sql`)
-3. `config.php` needs `RESOLVER_URL=http://127.0.0.1:5001`
-4. Real-time/search/DJ need real Pusher/YouTube/Gemini keys; the rest works without.
+1. Start PHP: `php -S 127.0.0.1:8000 -t .` (after creating `queueoke_test` DB + importing `schema.sql`)
+2. `config.php` needs DB credentials + Pusher/YouTube/Gemini keys
+3. Real-time/search/DJ need real keys; the rest works without.
 
 ## Verification commands
 - `php -l <file>` — syntax check every PHP file.
