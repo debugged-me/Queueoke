@@ -24,45 +24,47 @@ $qrTarget = $publicUrl . '/?room=' . urlencode($roomId);
 <link rel="stylesheet" href="assets/css/app.css">
 <style>
   /* TV-specific full-bleed layout */
-  body { background: #000; }
+  body { background: var(--bg); }
   .tv-root { display: grid; grid-template-columns: 1fr 380px; height: 100vh; }
   .stage { position: relative; background: #000; overflow: hidden; }
   #player-wrap { position: absolute; inset: 0; }
   #player-wrap iframe { width: 100%; height: 100%; }
-  .stage-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; pointer-events: none; }
+  .stage-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; pointer-events: none; z-index: 10; }
   .stage-overlay > * { pointer-events: auto; }
   .idle-msg { text-align: center; color: var(--muted); }
-  .idle-msg .big { font-size: 3rem; font-weight: 900; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .idle-msg .big { font-size: 3.5rem; font-weight: 900; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 30px rgba(168,85,247,0.3)); }
   #countdown { text-align: center; }
-  #countdown .ready-text { font-size: clamp(2rem, 5vw, 4rem); font-weight: 900; color: #fff; text-shadow: 0 0 40px rgba(255,90,95,0.6); animation: pop .9s ease; }
+  #countdown .ready-text { font-size: clamp(2rem, 5vw, 4rem); font-weight: 900; color: #fff; text-shadow: 0 0 40px rgba(255,45,120,0.6); animation: pop .9s ease; }
   #countdown .ready-sub { font-size: 1.2rem; color: var(--muted); margin-top: 8px; }
-  #countdown .ready-num { font-size: 6rem; font-weight: 900; color: var(--accent); margin-top: 12px; animation: pop .8s ease; }
+  #countdown .ready-num { font-size: 6rem; font-weight: 900; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; margin-top: 12px; animation: pop .8s ease; filter: drop-shadow(0 0 20px rgba(255,45,120,0.4)); }
   @keyframes pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
-  .now-bar { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.8)); display: flex; align-items: flex-end; gap: 16px; }
-  .now-bar .title { font-size: 1.4rem; font-weight: 700; }
-  .now-bar .sub { color: var(--muted); }
+  .now-bar { position: absolute; bottom: 0; left: 0; right: 0; padding: 18px 24px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85)); display: flex; align-items: flex-end; gap: 16px; z-index: 10; }
+  .now-bar .title { font-size: 1.5rem; font-weight: 800; }
+  .now-bar .sub { color: var(--muted); margin-top: 2px; }
 
   .sidebar { background: var(--bg-2); border-left: 1px solid var(--panel-2); display: flex; flex-direction: column; overflow: hidden; }
-  .sidebar header { padding: 18px; border-bottom: 1px solid var(--panel-2); }
-  .sidebar .room-code { font-size: 2rem; font-weight: 900; letter-spacing: 6px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .sidebar .qr-wrap { display: flex; gap: 14px; align-items: center; margin-top: 12px; }
-  #qrcode { background: #fff; padding: 8px; border-radius: 12px; width: 140px; height: 140px; }
+  .sidebar header { padding: 20px; border-bottom: 1px solid var(--panel-2); }
+  .sidebar .room-code { font-size: 2.2rem; font-weight: 900; letter-spacing: 8px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sidebar .qr-wrap { display: flex; gap: 14px; align-items: center; margin-top: 14px; }
+  #qrcode { background: #fff; padding: 8px; border-radius: 12px; width: 140px; height: 140px; box-shadow: var(--shadow-sm); }
   #qrcode img, #qrcode canvas { width: 124px !important; height: 124px !important; }
   .sidebar .scroll { flex: 1; overflow-y: auto; padding: 16px; }
-  .queue-item { display: flex; gap: 10px; padding: 10px; border-radius: 10px; background: var(--panel); margin-bottom: 8px; align-items: center; }
-  .queue-item .pos { width: 28px; text-align: center; font-weight: 800; color: var(--accent-2); }
+  .queue-item { display: flex; gap: 10px; padding: 12px; border-radius: 12px; background: var(--panel); border: 1px solid transparent; margin-bottom: 8px; align-items: center; transition: background var(--t-fast), border-color var(--t-fast); }
+  .queue-item:hover { background: var(--panel-2); }
+  .queue-item .pos { width: 28px; text-align: center; font-weight: 800; color: var(--purple); font-size: 1.1rem; }
   .queue-item img { width: 64px; height: 40px; object-fit: cover; border-radius: 6px; }
   .queue-item .meta { flex: 1; min-width: 0; }
   .queue-item .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .queue-item .s { color: var(--muted); font-size: .78rem; }
-  .queue-item.playing { background: var(--grad); }
+  .queue-item.playing { background: var(--grad-pink); border-color: rgba(255,45,120,0.3); }
   .queue-item.playing .pos, .queue-item.playing .s { color: rgba(255,255,255,0.85); }
+  .queue-item.playing .t { color: #fff; }
 
-  .controls { padding: 14px; border-top: 1px solid var(--panel-2); display: flex; flex-direction: column; gap: 10px; }
+  .controls { padding: 16px; border-top: 1px solid var(--panel-2); display: flex; flex-direction: column; gap: 12px; }
   .control-row { display: flex; align-items: center; gap: 10px; }
-  .pitch-slider { flex: 1; }
-  .guest-toast { background: var(--panel); border: 1px solid var(--panel-2); border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+  .pitch-slider { flex: 1; accent-color: var(--purple); }
+  .guest-toast { background: var(--panel); border: 1px solid var(--panel-3); border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; animation: slidein .3s ease; }
   .guest-toast .avatar { width: 36px; height: 36px; font-size: .9rem; }
   .guest-toast .btns { display: flex; gap: 6px; margin-left: auto; }
   .reaction-burst { position: absolute; top: 12%; left: 50%; transform: translateX(-50%);
