@@ -36,8 +36,7 @@ return [
     'GEMINI_MODEL' => 'gemini-flash-latest',
 
     // ----- App settings -----
-    // Public base URL of your deployed site (no trailing slash).
-    'PUBLIC_URL'   => 'https://queueoke.example.com',
+    // PUBLIC_URL is auto-detected from the request — no need to set it.
     // Rooms auto-expire after this many hours of inactivity (cleaned by api/cleanup.php or cron).
     'ROOM_TTL_HOURS' => 6,
     // Max songs a single guest can have queued at once (anti-hog).

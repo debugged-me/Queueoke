@@ -6,7 +6,6 @@
  */
 require_once __DIR__ . '/lib/config.php';
 $cfg = config_get();
-$publicUrl = rtrim($cfg['PUBLIC_URL'], '/');
 ?>
 <!doctype html>
 <html lang="en">
