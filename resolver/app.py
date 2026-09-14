@@ -73,7 +73,7 @@ def resolve_video(video_id: str) -> dict:
         # We check has_audio in the response so the TV knows.
         "format": "best",
         # Try multiple clients to bypass bot detection on datacenter IPs.
-        # Order matters: tv client often bypasses bot checks, then android, then web.
+        # tv client often bypasses bot checks and is more lenient with cookies.
         "extractor_args": {"youtube": {"player_client": ["tv", "ios", "android", "web"]}},
     }
     if cookies_path:
