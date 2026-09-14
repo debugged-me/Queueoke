@@ -39,8 +39,8 @@ def resolve_video(video_id: str) -> dict:
     opts = {
         **YT_OPTS_BASE,
         # Prefer progressive formats (audio+video combined) for simple <video> playback.
-        # Fall back to best video-only if no progressive available.
-        "format": "best[ext=mp4][acodec!=none]/best[acodec!=none]/best",
+        # Broad fallback chain: mp4 progressive → any progressive → best overall.
+        "format": "best[ext=mp4][vcodec!=none][acodec!=none]/best[vcodec!=none][acodec!=none]/best[ext=mp4]/best",
     }
 
     with yt_dlp.YoutubeDL(opts) as ydl:
