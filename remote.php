@@ -26,18 +26,15 @@ $status = $_GET['status'] ?? 'approved';
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
   .topbar .avatar { width: 34px; height: 34px; }
   .topbar .nick { font-weight: 700; }
-  .conn-status {
-    margin-left: auto; font-size: .8rem; color: var(--muted);
-    display: inline-flex; align-items: center; gap: 6px;
-  }
-  .conn-status .dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--amber); box-shadow: 0 0 8px var(--amber);
-    animation: pulse-dot 1.5s ease infinite;
-  }
+  .conn-status { margin-left: auto; font-size: .8rem; color: var(--muted);
+    display: inline-flex; align-items: center; gap: 6px; }
+  .conn-status .dot { width: 8px; height: 8px; border-radius: 50%;
+    background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: pulse-dot 1.5s ease infinite; }
   .conn-status.live .dot { background: var(--green); box-shadow: 0 0 8px var(--green); animation: none; }
   .conn-status.live { color: var(--green); }
-  @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: .4; }
+  .conn-status.waiting .dot { background: var(--amber); }
+  .conn-status.error .dot { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
+  @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
   .tabs { display: flex; gap: 6px; padding: 10px 12px; position: sticky; top: 57px; z-index: 99;
     background: rgba(8,8,15,0.85); border-bottom: 1px solid var(--panel-2); overflow-x: auto;
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
@@ -70,7 +67,6 @@ $status = $_GET['status'] ?? 'approved';
   .qitem .meta { flex: 1; min-width: 0; }
   .qitem .t { font-weight: 600; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .qitem .s { color: var(--muted); font-size: .76rem; }
-  .qitem .vote { display: flex; align-items: center; gap: 4px; font-weight: 700; }
   .soundboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .sfx { aspect-ratio: 1; border-radius: 16px; background: var(--panel); border: 1px solid var(--panel-2); display: flex;
     flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 2rem; font-weight: 800;
@@ -92,11 +88,11 @@ $status = $_GET['status'] ?? 'approved';
     <div class="nick"><?= htmlspecialchars($nick) ?></div>
     <div class="small muted">Room <?= htmlspecialchars($roomId) ?></div>
   </div>
-  <div class="conn-status waiting" id="conn-status"><span class="dot"></span> connecting</div>
+  <div class="conn-status <?= $status === 'approved' ? 'live' : 'waiting' ?>" id="conn-status"><span class="dot"></span> <?= $status === 'approved' ? 'live' : 'connecting' ?></div>
 </div>
 
-<!-- Pending approval screen -->
-<div class="pending-screen" id="pending-screen">
+<!-- Pending approval screen (hidden by default if already approved) -->
+<div class="pending-screen<?= $status === 'approved' ? ' hidden' : '' ?>" id="pending-screen">
   <div class="big">⏳</div>
   <div class="h1">Waiting for host approval</div>
   <div class="muted">The TV host will let you in shortly. Hang tight!</div>
@@ -104,7 +100,7 @@ $status = $_GET['status'] ?? 'approved';
 </div>
 
 <!-- Main app (hidden until approved) -->
-<div id="app" class="hidden">
+<div id="app"<?= $status === 'approved' ? '' : ' class="hidden"' ?>>
   <div class="tabs">
     <button class="tab active" data-tab="search">🔍 Search</button>
     <button class="tab" data-tab="queue">📋 Queue</button>
@@ -157,6 +153,7 @@ $status = $_GET['status'] ?? 'approved';
       <button class="sfx" data-r="airhorn">📯<span class="lbl">Airhorn</span></button>
       <button class="sfx" data-r="gong">🔔<span class="lbl">Gong</span></button>
       <button class="sfx" data-r="chime">✨<span class="lbl">Chime</span></button>
+      <button class="sfx" data-r="boo">🍅<span class="lbl">Boo</span></button>
       <button class="sfx" data-r="confetti">🎊<span class="lbl">Confetti</span></button>
     </div>
     <div class="small muted" style="margin-top:14px">Reactions play through the TV speakers and trigger confetti on the big screen.</div>

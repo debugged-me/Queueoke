@@ -31,8 +31,10 @@ $qrTarget = $publicUrl . '/?room=' . urlencode($roomId);
   #player-wrap iframe { width: 100%; height: 100%; }
   .stage-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; pointer-events: none; z-index: 10; }
   .stage-overlay > * { pointer-events: auto; }
-  .idle-msg { text-align: center; color: var(--muted); }
+  .idle-msg { text-align: center; color: var(--muted); animation: breathe 3s ease infinite; }
+  @keyframes breathe { 0%,100% { opacity: .7; } 50% { opacity: 1; } }
   .idle-msg .big { font-size: 3.5rem; font-weight: 900; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 30px rgba(168,85,247,0.3)); }
+  .idle-msg .guest-count { margin-top: 16px; }
   #countdown { text-align: center; }
   #countdown .ready-text { font-size: clamp(2rem, 5vw, 4rem); font-weight: 900; color: #fff; text-shadow: 0 0 40px rgba(255,45,120,0.6); animation: pop .9s ease; }
   #countdown .ready-sub { font-size: 1.2rem; color: var(--muted); margin-top: 8px; }

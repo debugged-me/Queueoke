@@ -21,6 +21,19 @@
   }
   setApproved(approved);
 
+  // ---------- Pusher connection state ----------
+  const connEl = document.getElementById('conn-status');
+  function setConnState(state, label) {
+    connEl.className = 'conn-status ' + state;
+    connEl.innerHTML = '<span class="dot"></span> ' + label;
+  }
+  const pusher = Q.getPusher && Q.getPusher();
+  if (pusher) {
+    pusher.connection.bind('connected', () => { if (approved) setConnState('live', 'live'); });
+    pusher.connection.bind('disconnected', () => setConnState('error', 'reconnecting'));
+    pusher.connection.bind('failed', () => setConnState('error', 'offline'));
+  }
+
   // ---------- Tabs ----------
   document.querySelectorAll('.tab').forEach(t => {
     t.addEventListener('click', () => {

@@ -17,7 +17,7 @@ $cfg = config_get();
 </head>
 <body>
 <div class="center-screen">
-  <div>
+  <div class="hero">
     <div class="brand">Queueoke</div>
     <div class="brand-sub">Karaoke Party</div>
   </div>
