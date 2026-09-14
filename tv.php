@@ -27,7 +27,8 @@ $qrTarget = $publicUrl . '/?room=' . urlencode($roomId);
   body { background: #000; }
   .tv-root { display: grid; grid-template-columns: 1fr 380px; height: 100vh; }
   .stage { position: relative; background: #000; overflow: hidden; }
-  #player { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  #player-wrap { position: absolute; inset: 0; }
+  #player-wrap iframe { width: 100%; height: 100%; }
   .stage-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; pointer-events: none; }
   .stage-overlay > * { pointer-events: auto; }
   .idle-msg { text-align: center; color: var(--muted); }
@@ -77,7 +78,7 @@ $qrTarget = $publicUrl . '/?room=' . urlencode($roomId);
 <div class="tv-root">
   <!-- STAGE -->
   <div class="stage">
-    <video id="player" playsinline></video>
+    <div id="player-wrap"></div>
     <canvas id="confetti"></canvas>
     <div class="stage-overlay" id="overlay">
       <div class="idle-msg" id="idle-msg">
@@ -145,6 +146,7 @@ window.QUEUEOKE_CFG = {
 };
 </script>
 <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="assets/js/common.js"></script>
 <script src="assets/js/tv.js"></script>

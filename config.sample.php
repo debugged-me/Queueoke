@@ -11,8 +11,6 @@
  *  - PUSHER_*    : https://pusher.com -> Create app (cluster e.g. "us2", get app_id/key/secret).
  *  - YOUTUBE_KEY : https://console.cloud.google.com -> enable "YouTube Data API v3", create API key.
  *  - GEMINI_KEY  : https://aistudio.google.com/app/apikey -> Create API key.
- *  - RESOLVER_URL: Deploy the resolver/ microservice (Python + yt-dlp) on a free tier.
- *                  See README.md -> "Deploy the Resolver Microservice".
  */
 
 return [
@@ -30,13 +28,8 @@ return [
     'PUSHER_CLUSTER'  => 'us2',
 
     // ----- YouTube Data API v3 (song search) -----
-    // Used by api/search.php to search for songs. Playback uses the resolver microservice.
+    // Used by api/search.php to search for songs. Playback uses the YouTube IFrame API (no key needed).
     'YOUTUBE_KEY'  => 'AIza...your-key',
-
-    // ----- Resolver microservice (YouTube -> direct video URL) -----
-    // Deploy the resolver/ folder on Render/Railway/Fly.io (see README).
-    // This service runs yt-dlp to extract direct streamable URLs for HTML5 <video>.
-    'RESOLVER_URL' => 'https://your-resolver.onrender.com',
 
     // ----- Google Gemini (AI DJ) -----
     'GEMINI_KEY'   => 'AIza...your-key',

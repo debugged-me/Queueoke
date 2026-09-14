@@ -1,4 +1,4 @@
-/* Queueoke TV host logic — HTML5 <video> player + resolver microservice. */
+/* Queueoke TV host logic — YouTube IFrame API + 5-second "Get Ready to Sing!" countdown. */
 (function () {
   'use strict';
   const Q = window.Q, CFG = window.QUEUEOKE_CFG;
@@ -8,25 +8,35 @@
   // ---------- State ----------
   let queue = [];
   let nowPlaying = null;
-  const player = document.getElementById('player'); // HTML5 <video> element
+  let player = null, playerReady = false;
   let countdownActive = false;
-  let resolving = false;
   let audioCtx = null, micStream = null, micNodes = null, micOn = false;
 
   // ---------- QR code ----------
   new QRCode(document.getElementById('qrcode'), { text: CFG.qr_target, width: 124, height: 124, correctLevel: 1 });
 
-  // ---------- Video element events ----------
-  player.addEventListener('ended', onSongEnded);
-  player.addEventListener('playing', () => {
-    document.getElementById('idle-msg')?.classList.add('hidden');
-    document.getElementById('now-bar').classList.remove('hidden');
-  });
+  // ---------- YouTube IFrame API ----------
+  window.onYouTubeIframeAPIReady = function () {
+    player = new YT.Player('player-wrap', {
+      height: '100%', width: '100%',
+      videoId: '',
+      playerVars: { autoplay: 1, controls: 0, disablekb: 1, modestbranding: 1, rel: 0, playsinline: 1, iv_load_policy: 3 },
+      events: {
+        onReady: () => { playerReady = true; maybeAdvance(); },
+        onStateChange: (e) => {
+          if (e.data === YT.PlayerState.ENDED) onSongEnded();
+          if (e.data === YT.PlayerState.PLAYING) {
+            document.getElementById('idle-msg')?.classList.add('hidden');
+            document.getElementById('now-bar').classList.remove('hidden');
+          }
+        },
+      },
+    });
+  };
 
   // ---------- Audio (soundboard effects + mic echo) ----------
   function ctx() { return audioCtx || (audioCtx = new (window.AudioContext || window.webkitAudioContext)()); }
 
-  // Synthesized sound effects — no audio files needed.
   function noiseBuffer(dur) {
     const c = ctx(), len = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate);
     const d = buf.getChannelData(0);
@@ -157,16 +167,15 @@
     } catch (e) { Q.toast('Mic access denied: ' + e.message, 'error'); }
   }
 
-  // ---------- Pitch (HTML5 video: playbackRate + preservesPitch=false = tape-style) ----------
-  // NOTE: This shifts both pitch AND tempo (like a tape). True pitch-only shifting
-  // is possible with Web Audio + a pitch shifter library (future enhancement).
+  // ---------- Pitch (YouTube IFrame playbackRate, snaps to nearest available) ----------
+  const YT_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+  function semisToRate(s) { return Math.pow(2, s / 12); }
+  function nearestRate(s) {
+    const target = semisToRate(s); return YT_RATES.reduce((a, b) => Math.abs(b - target) < Math.abs(a - target) ? b : a);
+  }
   function applyPitch(s) {
     document.getElementById('pitch-val').textContent = (s > 0 ? '+' : '') + s;
-    const rate = Math.pow(2, s / 12);
-    player.playbackRate = rate;
-    // preservesPitch=false → pitch changes with rate (tape-style transpose)
-    player.preservesPitch = false;
-    player.maintainsPitch = false; // Safari
+    if (playerReady && player && player.setPlaybackRate) player.setPlaybackRate(nearestRate(s));
     Q.api('pitch.php', { room_id: ROOM, host_token: TOKEN, pitch: s }).catch(() => {});
   }
   document.getElementById('pitch').addEventListener('input', (e) => applyPitch(parseInt(e.target.value, 10)));
@@ -194,9 +203,9 @@
   }
   function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
-  // ---------- Auto-advance / countdown ----------
+  // ---------- Auto-advance / 5-second countdown ----------
   function maybeAdvance() {
-    if (nowPlaying || countdownActive) return;
+    if (!playerReady || nowPlaying || countdownActive) return;
     const next = queue.find(s => s.status === 'queued');
     if (!next) {
       document.getElementById('idle-msg')?.classList.remove('hidden');
@@ -205,33 +214,12 @@
     startCountdown(next);
   }
 
-  // 5-second "Get Ready to Sing!" countdown — gives the video time to buffer.
-  // During the countdown, we resolve the direct URL and start preloading.
+  // 5-second "Get Ready to Sing!" countdown — gives the singer a cue to get ready.
   function startCountdown(song) {
     countdownActive = true;
     const el = document.getElementById('countdown');
     el.classList.remove('hidden');
     el.innerHTML = '<div class="ready-text">Get Ready to Sing!</div><div class="ready-sub">Starting in…</div><div class="ready-num">5</div>';
-
-    // Start resolving the URL immediately so it buffers during the countdown.
-    resolving = true;
-    Q.api('resolve.php?video_id=' + encodeURIComponent(song.video_id))
-      .then(r => {
-        player.src = r.url;
-        player.load(); // begin buffering
-        resolving = false;
-      })
-      .catch(() => {
-        // If resolve fails, show error and skip this song.
-        Q.toast('Could not resolve video. Skipping…', 'error');
-        el.classList.add('hidden');
-        countdownActive = false;
-        resolving = false;
-        // Mark as skipped and advance.
-        if (song.id) queue = queue.filter(s => s.id !== song.id);
-        renderQueue();
-        setTimeout(maybeAdvance, 300);
-      });
 
     let n = 5;
     const numEl = () => el.querySelector('.ready-num');
@@ -252,21 +240,8 @@
   function playSong(song) {
     nowPlaying = song;
     Q.api('now_playing.php', { room_id: ROOM, host_token: TOKEN, song_id: song.id }).catch(() => {});
-    // If resolve hasn't finished yet, wait briefly; otherwise play now.
-    if (resolving || !player.src) {
-      // Wait for resolve to complete (max 10s), then play.
-      const wait = setInterval(() => {
-        if (!resolving && player.src) {
-          clearInterval(wait);
-          player.play().catch(() => {});
-          applyPitch(parseInt(document.getElementById('pitch').value, 10));
-        }
-      }, 200);
-      setTimeout(() => clearInterval(wait), 10000);
-    } else {
-      player.play().catch(() => {});
-      applyPitch(parseInt(document.getElementById('pitch').value, 10));
-    }
+    player.loadVideoById(song.video_id);
+    applyPitch(parseInt(document.getElementById('pitch').value, 10));
     renderQueue(); renderNowBar();
   }
 
@@ -274,8 +249,6 @@
     if (nowPlaying) {
       Q.api('now_playing.php', { room_id: ROOM, host_token: TOKEN, song_id: null }).catch(() => {});
       nowPlaying = null;
-      player.removeAttribute('src');
-      player.load();
     }
     renderNowBar();
     setTimeout(maybeAdvance, 400);
@@ -286,11 +259,8 @@
     if (!nowPlaying) return;
     try {
       await Q.api('skip.php', { room_id: ROOM, host_token: TOKEN });
-      player.pause();
-      nowPlaying = null;
-      player.removeAttribute('src');
-      player.load();
-      renderNowBar();
+      if (player && player.stopVideo) player.stopVideo();
+      nowPlaying = null; renderNowBar();
       setTimeout(maybeAdvance, 300);
     } catch {}
   });
@@ -334,12 +304,8 @@
     maybeAdvance();
   });
   Q.bind(ROOM, 'song-skipped', () => {
-    player.pause();
-    nowPlaying = null;
-    player.removeAttribute('src');
-    player.load();
-    renderNowBar();
-    setTimeout(maybeAdvance, 300);
+    if (player && player.stopVideo) player.stopVideo();
+    nowPlaying = null; renderNowBar(); setTimeout(maybeAdvance, 300);
   });
   Q.bind(ROOM, 'song-voted', (d) => {
     const s = queue.find(x => x.id === d.song_id); if (s) { s.votes = d.votes; renderQueue(); }
@@ -365,19 +331,14 @@
       const playing = queue.find(x => x.status === 'playing');
       if (playing) {
         nowPlaying = playing;
-        // Resume the same video on reload.
-        try {
-          const r = await Q.api('resolve.php?video_id=' + encodeURIComponent(playing.video_id));
-          player.src = r.url;
-          player.play().catch(() => {});
-        } catch {}
+        if (playerReady && player) player.loadVideoById(playing.video_id);
       }
       renderQueue(); renderNowBar();
       if (s.room && typeof s.room.pitch === 'number') {
         document.getElementById('pitch').value = s.room.pitch;
         applyPitch(s.room.pitch);
       }
-      if (!playing) maybeAdvance();
+      maybeAdvance();
     } catch {}
   })();
 })();
