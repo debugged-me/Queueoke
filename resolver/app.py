@@ -108,12 +108,20 @@ def debug():
                 "has_url": bool(f.get("url")),
                 "format_note": f.get("format_note", ""),
             })
+        # Split into progressive (av+audio) and adaptive
+        progressive = [f for f in formats if f["vcodec"] not in (None, "none") and f["acodec"] not in (None, "none")]
+        video_only = [f for f in formats if f["vcodec"] not in (None, "none") and f["acodec"] in (None, "none")]
+        audio_only = [f for f in formats if f["vcodec"] in (None, "none") and f["acodec"] not in (None, "none")]
         return jsonify({
             "ok": True,
             "title": info.get("title", ""),
             "yt_dlp_version": yt_dlp.version.__version__,
             "format_count": len(formats),
-            "formats": formats[:10],
+            "progressive_count": len(progressive),
+            "video_only_count": len(video_only),
+            "audio_only_count": len(audio_only),
+            "progressive": progressive,
+            "video_only_best": video_only[:3],
         })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e), "yt_dlp_version": yt_dlp.version.__version__}), 500
