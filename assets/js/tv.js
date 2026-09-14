@@ -19,7 +19,6 @@
   window.onYouTubeIframeAPIReady = function () {
     player = new YT.Player('player-wrap', {
       height: '100%', width: '100%',
-      videoId: '',
       playerVars: { autoplay: 1, controls: 0, disablekb: 1, modestbranding: 1, rel: 0, playsinline: 1, iv_load_policy: 3 },
       events: {
         onReady: () => { playerReady = true; maybeAdvance(); },
@@ -28,6 +27,14 @@
           if (e.data === YT.PlayerState.PLAYING) {
             document.getElementById('idle-msg')?.classList.add('hidden');
             document.getElementById('now-bar').classList.remove('hidden');
+          }
+        },
+        onError: (e) => {
+          // 2: invalid param, 5: HTML5 error, 100: not found, 101/150: embedding not allowed
+          console.warn('YouTube playback error:', e.data);
+          if (nowPlaying) {
+            Q.toast('This video can\'t be played (embedding disabled). Skipping…', 'error');
+            onSongEnded();
           }
         },
       },
