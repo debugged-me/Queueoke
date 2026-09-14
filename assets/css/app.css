@@ -1,0 +1,138 @@
+/* Queueoke shared styles. Dark party theme, responsive TV-first. */
+:root {
+  --bg: #0a0a14;
+  --bg-2: #14142a;
+  --panel: rgba(255,255,255,0.06);
+  --panel-2: rgba(255,255,255,0.10);
+  --text: #f4f4ff;
+  --muted: #9a9ab5;
+  --accent: #ff5a5f;
+  --accent-2: #7a6bff;
+  --accent-3: #40d7ce;
+  --good: #8ce08a;
+  --bad: #ff5a5f;
+  --radius: 14px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  --grad: linear-gradient(135deg, #ff5a5f 0%, #7a6bff 50%, #40d7ce 100%);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: var(--accent-3); text-decoration: none; }
+button { font: inherit; cursor: pointer; border: none; color: inherit; background: none; }
+input, select { font: inherit; color: inherit; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--panel-2); border-radius: 4px; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 22px; border-radius: 999px; font-weight: 700;
+  background: var(--panel-2); color: var(--text); transition: transform .12s, background .2s;
+}
+.btn:hover { background: var(--panel); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn-primary { background: var(--grad); color: #fff; }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; border: 1px solid var(--panel-2); }
+.btn-danger { background: rgba(255,90,95,0.18); color: var(--bad); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-lg { padding: 18px 32px; font-size: 1.1rem; }
+.btn-sm { padding: 8px 14px; font-size: .85rem; }
+
+/* ---------- Layout ---------- */
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.center-screen {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 20px; padding: 24px; text-align: center;
+}
+.panel { background: var(--panel); border-radius: var(--radius); padding: 20px; }
+.card { background: var(--panel); border-radius: var(--radius); padding: 16px; }
+
+/* ---------- Landing ---------- */
+.brand { font-size: clamp(2.5rem, 8vw, 5rem); font-weight: 900; letter-spacing: -2px;
+  background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tagline { color: var(--muted); font-size: clamp(1rem, 2.5vw, 1.4rem); max-width: 540px; }
+.role-pick { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
+.role-card {
+  width: 260px; padding: 28px 20px; border-radius: 20px; background: var(--panel);
+  border: 1px solid var(--panel-2); transition: transform .15s, border-color .2s; text-align: left;
+}
+.role-card:hover { transform: translateY(-4px); border-color: var(--accent-2); }
+.role-card .icon { font-size: 2.6rem; }
+.role-card h3 { margin: 12px 0 6px; font-size: 1.3rem; }
+.role-card p { color: var(--muted); font-size: .92rem; line-height: 1.4; }
+
+/* ---------- Forms ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field label { font-size: .8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.input {
+  padding: 14px 16px; border-radius: 12px; background: var(--bg-2);
+  border: 1px solid var(--panel-2); font-size: 1rem; outline: none;
+}
+.input:focus { border-color: var(--accent-2); }
+
+/* ---------- Badges ---------- */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px;
+  border-radius: 999px; font-size: .72rem; font-weight: 700;
+}
+.badge-karaoke { background: rgba(64,215,206,0.18); color: var(--accent-3); }
+.badge-now { background: var(--grad); color: #fff; }
+.badge-pending { background: rgba(255,180,0,0.18); color: #ffb400; }
+.badge-approved { background: rgba(140,224,138,0.18); color: var(--good); }
+
+/* ---------- Song row ---------- */
+.song {
+  display: flex; align-items: center; gap: 12px; padding: 10px;
+  border-radius: 12px; background: var(--panel); transition: background .15s;
+}
+.song:hover { background: var(--panel-2); }
+.song img { width: 72px; height: 54px; object-fit: cover; border-radius: 8px; background: var(--bg-2); }
+.song .meta { flex: 1; min-width: 0; }
+.song .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song .sub { color: var(--muted); font-size: .82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song .actions { display: flex; gap: 6px; align-items: center; }
+
+/* ---------- Toast ---------- */
+#toasts { position: fixed; top: 16px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+.toast {
+  background: var(--bg-2); border: 1px solid var(--panel-2); border-radius: 12px;
+  padding: 12px 16px; min-width: 240px; box-shadow: var(--shadow); animation: slidein .25s ease;
+}
+.toast.error { border-color: var(--bad); }
+.toast.success { border-color: var(--good); }
+@keyframes slidein { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- Confetti canvas (TV) ---------- */
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 9000; }
+
+/* ---------- Utility ---------- */
+.row { display: flex; gap: 12px; align-items: center; }
+.col { display: flex; flex-direction: column; gap: 12px; }
+.between { justify-content: space-between; }
+.wrap-row { flex-wrap: wrap; }
+.muted { color: var(--muted); }
+.small { font-size: .82rem; }
+.hidden { display: none !important; }
+.spacer { flex: 1; }
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%; display: inline-flex;
+  align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: .8rem;
+}
+.h1 { font-size: 1.6rem; font-weight: 800; }
+.h2 { font-size: 1.2rem; font-weight: 700; }
+.section-title { font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+  .wrap { padding: 14px; }
+  .role-card { width: 100%; }
+  .song img { width: 56px; height: 42px; }
+}
