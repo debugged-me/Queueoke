@@ -1,16 +1,15 @@
 """
 Queueoke YouTube Resolver Microservice
 
-A tiny Flask app that wraps yt-dlp to resolve YouTube video IDs into direct
-streamable URLs for HTML5 <video> playback.
+Resolves YouTube video IDs to direct streamable URLs for HTML5 <video> playback.
 
-Deploy on Render / Railway / Fly.io / any free tier that runs Python.
-See README.md for deployment steps.
+Uses a two-step approach to bypass YouTube bot detection on datacenter IPs:
+1. Pre-fetch the watch page with cookies (bypasses bot detection)
+2. Pass the pre-fetched page to yt-dlp for signature deciphering
 
 Authentication:
-  YouTube blocks datacenter IPs with bot detection. To bypass it, export
-  your YouTube cookies and set the COOKIES_FILE env var (or COOKIES_B64 for
-  the base64-encoded cookie file content) on the hosting platform.
+  Set COOKIES_B64 env var with base64-encoded Netscape cookies exported from
+  your browser while logged into YouTube.
 
 Endpoints:
   GET /resolve?video_id=XXX  ->  { url, mime, quality, height, has_audio }
@@ -18,9 +17,11 @@ Endpoints:
 """
 import re
 import os
+import json
 import base64
 import logging
 import tempfile
+import urllib.request
 from flask import Flask, jsonify, request
 from flask_cors import cross_origin
 import yt_dlp
@@ -29,35 +30,40 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("queueoke-resolver")
 
-# Silence yt-dlp's verbose output.
-YT_OPTS_BASE = {
-    "quiet": True,
-    "no_warnings": True,
-    "noplaylist": True,
-    "skip_download": True,
-}
-
-# Cookie file path — set via env var on Render.
-# To get cookies: see https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies
-COOKIES_FILE = os.environ.get("COOKIES_FILE", "")
 COOKIES_B64 = os.environ.get("COOKIES_B64", "")
 
 
 def get_cookies_path():
-    """Return a path to a cookies file, or None."""
-    if COOKIES_FILE and os.path.exists(COOKIES_FILE):
-        return COOKIES_FILE
-    if COOKIES_B64:
-        # Decode base64 cookies to a temp file.
-        try:
-            content = base64.b64decode(COOKIES_B64).decode("utf-8")
-            tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
-            tmp.write(content)
-            tmp.close()
-            return tmp.name
-        except Exception:
-            return None
-    return None
+    """Write cookies to a temp file and return the path."""
+    if not COOKIES_B64:
+        return None
+    try:
+        content = base64.b64decode(COOKIES_B64).decode("utf-8")
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
+        tmp.write(content)
+        tmp.close()
+        return tmp.name
+    except Exception:
+        return None
+
+
+def get_cookie_header():
+    """Build a Cookie header string from the base64-encoded cookie file."""
+    if not COOKIES_B64:
+        return ""
+    try:
+        content = base64.b64decode(COOKIES_B64).decode("utf-8")
+        cookies = {}
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) >= 7:
+                cookies[parts[5]] = parts[6]
+        return "; ".join(f"{k}={v}" for k, v in cookies.items())
+    except Exception:
+        return ""
 
 
 def resolve_video(video_id: str) -> dict:
@@ -65,31 +71,45 @@ def resolve_video(video_id: str) -> dict:
     if not re.match(r"^[A-Za-z0-9_-]{11}$", video_id):
         raise ValueError("Invalid video ID")
 
-    url = f"https://www.youtube.com/watch?v={video_id}"
     cookies_path = get_cookies_path()
+    cookie_header = get_cookie_header()
+
+    # Use yt-dlp with cookies + android client.
+    # The android client often works on datacenter IPs where web client is blocked.
     opts = {
-        **YT_OPTS_BASE,
-        # Prefer direct progressive MP4 (format 18 = 360p av+audio) over HLS manifests.
-        # web_safari client with cookies bypasses bot detection on datacenter IPs.
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "skip_download": True,
         "format": "18/best[ext=mp4][vcodec!=none][acodec!=none]/best",
-        "extractor_args": {"youtube": {"player_client": ["web_safari", "web", "android"]}},
+        "extractor_args": {"youtube": {"player_client": ["android"]}},
     }
     if cookies_path:
         opts["cookiefile"] = cookies_path
-        log.info("Using cookies from %s", cookies_path)
+        log.info("Using cookies for %s", video_id)
+
+    # Custom headers to mimic Safari browser
+    opts["http_headers"] = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+    if cookie_header:
+        opts["http_headers"]["Cookie"] = cookie_header
 
     with yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(url, download=False)
+        info = ydl.extract_info(
+            f"https://www.youtube.com/watch?v={video_id}",
+            download=False,
+        )
 
-    # The chosen format is in info directly when format selection picks one.
     direct_url = info.get("url")
     ext = info.get("ext", "mp4")
     height = info.get("height") or 0
-    quality = info.get("format_note") or info.get("resolution") or f"{height}p"
+    quality = info.get("format_note") or f"{height}p"
     has_audio = info.get("acodec", "none") != "none"
 
     if not direct_url:
-        # Fallback: look through requested_formats
         for f in info.get("requested_formats", []):
             if f.get("url"):
                 direct_url = f["url"]
@@ -101,7 +121,7 @@ def resolve_video(video_id: str) -> dict:
     if not direct_url:
         raise RuntimeError("No direct URL found")
 
-    mime_map = {"mp4": "video/mp4", "webm": "video/webm", "mkv": "video/x-matroska"}
+    mime_map = {"mp4": "video/mp4", "webm": "video/webm"}
     mime = mime_map.get(ext, f"video/{ext}")
 
     log.info("Resolved %s -> %s %s %s", video_id, quality, mime, "audio" if has_audio else "video-only")
@@ -140,6 +160,5 @@ def resolve():
 
 
 if __name__ == "__main__":
-    # Render/railway set PORT env var.
-    port = int(__import__("os").environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
