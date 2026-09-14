@@ -41,6 +41,9 @@ def resolve_video(video_id: str) -> dict:
         # Use 'best' — always available. May be progressive (av+audio) or video-only.
         # We check has_audio in the response so the TV knows.
         "format": "best",
+        # Try Android client first — it often gets progressive (av+audio) formats
+        # even on datacenter IPs where the web client only serves adaptive streams.
+        "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
     }
 
     with yt_dlp.YoutubeDL(opts) as ydl:
