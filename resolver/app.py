@@ -38,9 +38,9 @@ def resolve_video(video_id: str) -> dict:
     url = f"https://www.youtube.com/watch?v={video_id}"
     opts = {
         **YT_OPTS_BASE,
-        # Prefer progressive formats (audio+video combined) for simple <video> playback.
-        # Broad fallback chain: mp4 progressive → any progressive → best overall.
-        "format": "best[ext=mp4][vcodec!=none][acodec!=none]/best[vcodec!=none][acodec!=none]/best[ext=mp4]/best",
+        # Use 'best' — always available. May be progressive (av+audio) or video-only.
+        # We check has_audio in the response so the TV knows.
+        "format": "best",
     }
 
     with yt_dlp.YoutubeDL(opts) as ydl:
