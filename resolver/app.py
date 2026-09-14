@@ -69,12 +69,10 @@ def resolve_video(video_id: str) -> dict:
     cookies_path = get_cookies_path()
     opts = {
         **YT_OPTS_BASE,
-        # Use 'best' — always available. May be progressive (av+audio) or video-only.
-        # We check has_audio in the response so the TV knows.
-        "format": "best",
-        # Try multiple clients to bypass bot detection on datacenter IPs.
-        # tv client often bypasses bot checks and is more lenient with cookies.
-        "extractor_args": {"youtube": {"player_client": ["tv", "ios", "android", "web"]}},
+        # Prefer direct progressive MP4 (format 18 = 360p av+audio) over HLS manifests.
+        # web_safari client with cookies bypasses bot detection on datacenter IPs.
+        "format": "18/best[ext=mp4][vcodec!=none][acodec!=none]/best",
+        "extractor_args": {"youtube": {"player_client": ["web_safari", "web", "android"]}},
     }
     if cookies_path:
         opts["cookiefile"] = cookies_path
