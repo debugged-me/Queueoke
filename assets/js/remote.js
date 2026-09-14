@@ -164,7 +164,7 @@
     if (d.guest_id === GUEST) setApproved(d.decision === 'approved');
   });
   Q.bind(ROOM, 'song-added', (d) => { if (!queue.find(s => s.id === d.id)) queue.push(d); renderQueue(); });
-  Q.bind(ROOM, 'song-skipped', () => { nowPlaying = null; renderQueue(); });
+  Q.bind(ROOM, 'song-skipped', () => { queue = queue.filter(s => s.status !== 'playing'); nowPlaying = null; renderQueue(); });
   Q.bind(ROOM, 'song-voted', (d) => { const s = queue.find(x => x.id === d.song_id); if (s) { s.votes = d.votes; renderQueue(); } });
   Q.bind(ROOM, 'queue-reordered', (d) => {
     const order = d.ordered_ids || [];
@@ -172,9 +172,13 @@
     renderQueue();
   });
   Q.bind(ROOM, 'now-playing', (d) => {
-    nowPlaying = d.song;
-    // Mark the playing item in queue.
-    queue.forEach(s => s.status = (s.id === d.song?.id) ? 'playing' : (s.status === 'playing' ? 'queued' : s.status));
+    if (d.song) {
+      nowPlaying = d.song;
+      queue.forEach(s => s.status = (s.id === d.song.id) ? 'playing' : (s.status === 'playing' ? 'queued' : s.status));
+    } else {
+      nowPlaying = null;
+      queue = queue.filter(s => s.status !== 'playing');
+    }
     renderQueue();
   });
 

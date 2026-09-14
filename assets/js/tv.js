@@ -21,7 +21,15 @@
       height: '100%', width: '100%',
       playerVars: { autoplay: 1, controls: 0, disablekb: 1, modestbranding: 1, rel: 0, playsinline: 1, iv_load_policy: 3 },
       events: {
-        onReady: () => { playerReady = true; maybeAdvance(); },
+        onReady: () => {
+          playerReady = true;
+          if (nowPlaying && player) {
+            player.loadVideoById(nowPlaying.video_id);
+            applyPitch(parseInt(document.getElementById('pitch').value, 10));
+          } else {
+            maybeAdvance();
+          }
+        },
         onStateChange: (e) => {
           if (e.data === YT.PlayerState.ENDED) onSongEnded();
           if (e.data === YT.PlayerState.PLAYING) {
@@ -245,6 +253,7 @@
   }
 
   function playSong(song) {
+    song.status = 'playing';
     nowPlaying = song;
     Q.api('now_playing.php', { room_id: ROOM, host_token: TOKEN, song_id: song.id }).catch(() => {});
     player.loadVideoById(song.video_id);
@@ -254,9 +263,12 @@
 
   function onSongEnded() {
     if (nowPlaying) {
+      nowPlaying.status = 'done';
+      queue = queue.filter(s => s.id !== nowPlaying.id);
       Q.api('now_playing.php', { room_id: ROOM, host_token: TOKEN, song_id: null }).catch(() => {});
       nowPlaying = null;
     }
+    renderQueue();
     renderNowBar();
     setTimeout(maybeAdvance, 400);
   }
@@ -267,7 +279,9 @@
     try {
       await Q.api('skip.php', { room_id: ROOM, host_token: TOKEN });
       if (player && player.stopVideo) player.stopVideo();
-      nowPlaying = null; renderNowBar();
+      nowPlaying.status = 'skipped';
+      queue = queue.filter(s => s.id !== nowPlaying.id);
+      nowPlaying = null; renderQueue(); renderNowBar();
       setTimeout(maybeAdvance, 300);
     } catch {}
   });
@@ -323,7 +337,8 @@
   });
   Q.bind(ROOM, 'song-skipped', () => {
     if (player && player.stopVideo) player.stopVideo();
-    nowPlaying = null; renderNowBar(); setTimeout(maybeAdvance, 300);
+    if (nowPlaying) { nowPlaying.status = 'skipped'; queue = queue.filter(s => s.id !== nowPlaying.id); }
+    nowPlaying = null; renderQueue(); renderNowBar(); setTimeout(maybeAdvance, 300);
   });
   Q.bind(ROOM, 'song-voted', (d) => {
     const s = queue.find(x => x.id === d.song_id); if (s) { s.votes = d.votes; renderQueue(); }
