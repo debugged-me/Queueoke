@@ -74,67 +74,89 @@ def resolve_video(video_id: str) -> dict:
     cookies_path = get_cookies_path()
     cookie_header = get_cookie_header()
 
-    # Use yt-dlp with cookies + android client.
-    # The android client often works on datacenter IPs where web client is blocked.
-    opts = {
-        "quiet": True,
-        "no_warnings": True,
-        "noplaylist": True,
-        "skip_download": True,
-        "format": "18/best[ext=mp4][vcodec!=none][acodec!=none]/best",
-        "extractor_args": {"youtube": {"player_client": ["android"]}},
-    }
-    if cookies_path:
-        opts["cookiefile"] = cookies_path
-        log.info("Using cookies for %s", video_id)
+    # Try multiple client strategies in order. The android client often works
+    # on datacenter IPs without cookies. If it fails, fall back to cookies.
+    strategies = [
+        # Strategy 1: Android client, no cookies (works for most videos)
+        {
+            "format": "18/best[ext=mp4][vcodec!=none][acodec!=none]/best",
+            "extractor_args": {"youtube": {"player_client": ["android"]}},
+        },
+        # Strategy 2: Android client with cookies (for bot-detected videos)
+        {
+            "format": "18/best[ext=mp4][vcodec!=none][acodec!=none]/best",
+            "extractor_args": {"youtube": {"player_client": ["android"]}},
+            "use_cookies": True,
+        },
+        # Strategy 3: Web client with cookies (last resort)
+        {
+            "format": "18/best[ext=mp4][vcodec!=none][acodec!=none]/best",
+            "extractor_args": {"youtube": {"player_client": ["web"]}},
+            "use_cookies": True,
+        },
+    ]
 
-    # Custom headers to mimic Safari browser
-    opts["http_headers"] = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    }
-    if cookie_header:
-        opts["http_headers"]["Cookie"] = cookie_header
+    last_error = None
+    for i, strategy in enumerate(strategies):
+        use_cookies = strategy.pop("use_cookies", False)
+        opts = {
+            "quiet": True,
+            "no_warnings": True,
+            "noplaylist": True,
+            "skip_download": True,
+            **strategy,
+        }
+        if use_cookies and cookies_path:
+            opts["cookiefile"] = cookies_path
+            log.info("Strategy %d: %s + cookies for %s", i + 1, strategy["extractor_args"]["youtube"]["player_client"], video_id)
+        else:
+            log.info("Strategy %d: %s for %s", i + 1, strategy["extractor_args"]["youtube"]["player_client"], video_id)
 
-    with yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(
-            f"https://www.youtube.com/watch?v={video_id}",
-            download=False,
-        )
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(
+                    f"https://www.youtube.com/watch?v={video_id}",
+                    download=False,
+                )
 
-    direct_url = info.get("url")
-    ext = info.get("ext", "mp4")
-    height = info.get("height") or 0
-    quality = info.get("format_note") or f"{height}p"
-    has_audio = info.get("acodec", "none") != "none"
+            direct_url = info.get("url")
+            ext = info.get("ext", "mp4")
+            height = info.get("height") or 0
+            quality = info.get("format_note") or f"{height}p"
+            has_audio = info.get("acodec", "none") != "none"
 
-    if not direct_url:
-        for f in info.get("requested_formats", []):
-            if f.get("url"):
-                direct_url = f["url"]
-                ext = f.get("ext", ext)
-                height = f.get("height", height)
-                has_audio = f.get("acodec", "none") != "none"
-                break
+            if not direct_url:
+                for f in info.get("requested_formats", []):
+                    if f.get("url"):
+                        direct_url = f["url"]
+                        ext = f.get("ext", ext)
+                        height = f.get("height", height)
+                        has_audio = f.get("acodec", "none") != "none"
+                        break
 
-    if not direct_url:
-        raise RuntimeError("No direct URL found")
+            if not direct_url:
+                raise RuntimeError("No direct URL found")
 
-    mime_map = {"mp4": "video/mp4", "webm": "video/webm"}
-    mime = mime_map.get(ext, f"video/{ext}")
+            mime_map = {"mp4": "video/mp4", "webm": "video/webm"}
+            mime = mime_map.get(ext, f"video/{ext}")
 
-    log.info("Resolved %s -> %s %s %s", video_id, quality, mime, "audio" if has_audio else "video-only")
+            log.info("Resolved %s -> %s %s %s (strategy %d)", video_id, quality, mime, "audio" if has_audio else "video-only", i + 1)
 
-    return {
-        "url": direct_url,
-        "mime": mime,
-        "quality": quality,
-        "height": height,
-        "has_audio": has_audio,
-        "title": info.get("title", ""),
-        "duration": info.get("duration", 0),
-    }
+            return {
+                "url": direct_url,
+                "mime": mime,
+                "quality": quality,
+                "height": height,
+                "has_audio": has_audio,
+                "title": info.get("title", ""),
+                "duration": info.get("duration", 0),
+            }
+        except Exception as e:
+            last_error = e
+            log.warning("Strategy %d failed for %s: %s", i + 1, video_id, str(e)[:100])
+            continue
+
+    raise last_error or RuntimeError("All strategies failed")
 
 
 @app.route("/health")
