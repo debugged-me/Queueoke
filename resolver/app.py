@@ -7,12 +7,20 @@ streamable URLs for HTML5 <video> playback.
 Deploy on Render / Railway / Fly.io / any free tier that runs Python.
 See README.md for deployment steps.
 
+Authentication:
+  YouTube blocks datacenter IPs with bot detection. To bypass it, export
+  your YouTube cookies and set the COOKIES_FILE env var (or COOKIES_B64 for
+  the base64-encoded cookie file content) on the hosting platform.
+
 Endpoints:
   GET /resolve?video_id=XXX  ->  { url, mime, quality, height, has_audio }
   GET /health                ->  { ok: true }
 """
 import re
+import os
+import base64
 import logging
+import tempfile
 from flask import Flask, jsonify, request
 from flask_cors import cross_origin
 import yt_dlp
@@ -29,6 +37,28 @@ YT_OPTS_BASE = {
     "skip_download": True,
 }
 
+# Cookie file path — set via env var on Render.
+# To get cookies: see https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies
+COOKIES_FILE = os.environ.get("COOKIES_FILE", "")
+COOKIES_B64 = os.environ.get("COOKIES_B64", "")
+
+
+def get_cookies_path():
+    """Return a path to a cookies file, or None."""
+    if COOKIES_FILE and os.path.exists(COOKIES_FILE):
+        return COOKIES_FILE
+    if COOKIES_B64:
+        # Decode base64 cookies to a temp file.
+        try:
+            content = base64.b64decode(COOKIES_B64).decode("utf-8")
+            tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
+            tmp.write(content)
+            tmp.close()
+            return tmp.name
+        except Exception:
+            return None
+    return None
+
 
 def resolve_video(video_id: str) -> dict:
     """Resolve a YouTube video ID to a direct streamable URL."""
@@ -36,6 +66,7 @@ def resolve_video(video_id: str) -> dict:
         raise ValueError("Invalid video ID")
 
     url = f"https://www.youtube.com/watch?v={video_id}"
+    cookies_path = get_cookies_path()
     opts = {
         **YT_OPTS_BASE,
         # Use 'best' — always available. May be progressive (av+audio) or video-only.
@@ -45,6 +76,9 @@ def resolve_video(video_id: str) -> dict:
         # Order matters: tv client often bypasses bot checks, then android, then web.
         "extractor_args": {"youtube": {"player_client": ["tv", "ios", "android", "web"]}},
     }
+    if cookies_path:
+        opts["cookiefile"] = cookies_path
+        log.info("Using cookies from %s", cookies_path)
 
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=False)
