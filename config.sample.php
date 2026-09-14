@@ -40,7 +40,7 @@ return [
 
     // ----- Google Gemini (AI DJ) -----
     'GEMINI_KEY'   => 'AIza...your-key',
-    'GEMINI_MODEL' => 'gemini-1.5-flash',
+    'GEMINI_MODEL' => 'gemini-flash-latest',
 
     // ----- App settings -----
     // Public base URL of your deployed site (no trailing slash).

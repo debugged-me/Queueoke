@@ -90,46 +90,6 @@ def health():
     return jsonify({"ok": True, "service": "queueoke-resolver"})
 
 
-@app.route("/debug")
-@cross_origin()
-def debug():
-    """Debug endpoint — lists all available formats for a video."""
-    video_id = request.args.get("video_id", "dQw4w9WgXcQ").strip()
-    url = f"https://www.youtube.com/watch?v={video_id}"
-    opts = {**YT_OPTS_BASE, "listformats": True}
-    try:
-        with yt_dlp.YoutubeDL({**YT_OPTS_BASE, "skip_download": True}) as ydl:
-            info = ydl.extract_info(url, download=False)
-        formats = []
-        for f in info.get("formats", []):
-            formats.append({
-                "format_id": f.get("format_id"),
-                "ext": f.get("ext"),
-                "height": f.get("height"),
-                "vcodec": f.get("vcodec"),
-                "acodec": f.get("acodec"),
-                "has_url": bool(f.get("url")),
-                "format_note": f.get("format_note", ""),
-            })
-        # Split into progressive (av+audio) and adaptive
-        progressive = [f for f in formats if f["vcodec"] not in (None, "none") and f["acodec"] not in (None, "none")]
-        video_only = [f for f in formats if f["vcodec"] not in (None, "none") and f["acodec"] in (None, "none")]
-        audio_only = [f for f in formats if f["vcodec"] in (None, "none") and f["acodec"] not in (None, "none")]
-        return jsonify({
-            "ok": True,
-            "title": info.get("title", ""),
-            "yt_dlp_version": yt_dlp.version.__version__,
-            "format_count": len(formats),
-            "progressive_count": len(progressive),
-            "video_only_count": len(video_only),
-            "audio_only_count": len(audio_only),
-            "progressive": progressive,
-            "video_only_best": video_only[:3],
-        })
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e), "yt_dlp_version": yt_dlp.version.__version__}), 500
-
-
 @app.route("/resolve")
 @cross_origin()
 def resolve():
